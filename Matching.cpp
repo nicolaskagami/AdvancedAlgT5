@@ -45,7 +45,10 @@ void Matching::print()
     {
         for(unsigned j=0;j<num_nodes;j++)
         {
-            printf("%i ",weights[i*num_nodes+j]);
+            if(matches[i]==j)
+                printf("[%i] ",weights[i*num_nodes+j]);
+            else
+                printf("%i ",weights[i*num_nodes+j]);
         }
         printf("\n");
     }
@@ -59,44 +62,104 @@ void Matching::print()
 void Matching::BellmanFordMatch()
 {
     unsigned * prev;
-    bool * visited;
     unsigned * src;
-    int * value;
-    value = new int[num_nodes];
-    visited = new bool[num_nodes];
+    int * Avalue = new int[num_nodes];
+    int * Bvalue = new int[num_nodes];
+    bool * Avisited = new bool[num_nodes];
+    bool * Bvisited = new bool[num_nodes];
     prev = new unsigned[num_nodes];
     src = new unsigned[num_nodes];
     for(unsigned i=0;i<num_nodes;i++)
     {
         matches[i] = i;
-        visited[i]=false; 
+        Avisited[i]=false; 
+        Bvisited[i]=false; 
         prev[i]=i; 
-        value[i]=0;
+        Avalue[i]=0;
+        Bvalue[i]=0;
     }
-
+    unsigned cycler;
     bool foundAugPath;
     do
     {
         foundAugPath = false;
         //Search Augmenting Path
-        for(unsigned i=0;i<num_nodes;i++)
+        for(unsigned potential_cycle=0;potential_cycle<num_nodes;potential_cycle++)
         {
-            for(unsigned j=0;j<num_nodes;j++)
+            for(unsigned i=0;i<num_nodes;i++)
             {
-                if(j!=matches[i]) 
-                {
-                           
-                }
+                Avisited[i]=false; 
+                Bvisited[i]=false; 
+                prev[i]=3; 
+                Avalue[i]=0;
+                Bvalue[i]=0;
             }
+            Avisited[potential_cycle]=true;
+            for(unsigned k=0;k<num_nodes;k++)
+            {
+                //From now on, complexity = O(E)
+                for(unsigned i=0;i<num_nodes;i++)
+                {
+                    for(unsigned j=0;j<num_nodes;j++)
+                    {
+                        if(j==matches[i]) 
+                        {
+                            //If there is a value to propagate and (this is a new node || this is a better value)
+                            if((Bvisited[j])&&(!Avisited[i] || (Avalue[i] < Bvalue[j] - weights[i*num_nodes+j])))
+                            {
+                                Avalue[i] = Bvalue[j] - weights[i*num_nodes+j];
+                                Avisited[i] = true;
+                                if(i==potential_cycle)
+                                {
+                                    cycler = potential_cycle;
+                                    printf("Value: %u\n",Avalue[i]);
+                                    print();
+                                    foundAugPath = true;break;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //If there is a value to propagate and (this is a new node || this is a better value)
+                            if((Avisited[i])&&(!Bvisited[j] || (Bvalue[j] < Avalue[i] + weights[i*num_nodes+j])))
+                            {
+                                Bvalue[j] = Avalue[i] + weights[i*num_nodes+j];
+                                prev[j] = i;
+                                Bvisited[j] = true;
+                            }
+                        }
+                    }
+                    if(foundAugPath)
+                        break;
+                }
+                if(foundAugPath)
+                    break;
+            }
+            if(foundAugPath)
+                break;
         }
+
         if(foundAugPath)
-            ;//Apply Augmenting Path
-     
+        {
+            unsigned node = matches[cycler];
+            printf("Cycler: %u\n",cycler);
+            while(Bvisited[node]&&(prev[node]!=cycler))
+            {
+                printf("BNode: %u\n",node);
+                printf("ANode: %u\n",prev[node]);
+                unsigned next_node = matches[prev[node]];
+                matches[prev[node]] = node;
+                node = next_node;
+            }
+            matches[cycler] = node;
+        }//Apply Augmenting Path
     }while(foundAugPath);//There is augmenting path
       
     delete prev;
-    delete visited;
-    delete value;
+    delete Avisited;
+    delete Bvisited;
+    delete Avalue;
+    delete Bvalue;
     delete src;
 }
 
